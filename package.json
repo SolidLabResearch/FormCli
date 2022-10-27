@@ -1,0 +1,12 @@
+{
+  "name": "form-cli",
+  "version": "1.0.0",
+  "description": "A form viewer app with Solid, but from the command line - Google Forms but the Solid way",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Ieben Smessaert",
+  "license": "MIT"
+}
