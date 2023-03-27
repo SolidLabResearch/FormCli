@@ -1,6 +1,7 @@
 import { QueryEngine } from '@comunica/query-sparql';
 import inquirer from 'inquirer';
 import DatePrompt from "inquirer-date-prompt";
+import {n3reasoner} from "eyereasoner";
 
 inquirer.registerPrompt("date", DatePrompt);
 
@@ -271,4 +272,116 @@ export async function confirmSubmit() {
     ];
     const answer = await inquirer.prompt(questions);
     return answer.submit;
+}
+
+export async function submit(form, formUrl, fields) {
+    const options = { blogic: false, outputType: "string" };
+    const reasonerResult = await n3reasoner(
+        `PREFIX ex: <http://example.org/>\n<${formUrl}> ex:event ex:Submit .`,
+        form,
+        options
+    );
+
+    const policies = await parseSubmitPolicy(reasonerResult, formUrl);
+    if (!policies) {
+        console.warn("No ex:Submit policy found for this form.");
+        return;
+    }
+    const data = parseSubmitData(fields);
+
+    let redirectPolicy;
+    let success = true;
+
+    for (const policy of policies) {
+        if (policy.executionTarget === "http://example.org/httpRequest") {
+            success = (await submitHttpRequest(policy, data)) && success;
+        } else if (policy.executionTarget === "http://example.org/redirect") {
+            redirectPolicy = policy;
+        } else {
+            console.warn("Unknown execution target: " + policy.executionTarget);
+        }
+    }
+
+    if (redirectPolicy && success) {
+        // Print the redirect URL as we can't redirect from the terminal
+        console.log("Redirecting to: " + redirectPolicy.url);
+    }
+}
+
+async function parseSubmitPolicy(doc, formUrl) {
+    const queryPolicy = `
+      PREFIX ex: <http://example.org/>
+      PREFIX pol: <https://www.example.org/ns/policy#>
+      PREFIX fno: <https://w3id.org/function/ontology#>
+
+      SELECT ?executionTarget ?method ?url ?contentType WHERE {
+        ?id pol:policy ?policy .
+        ?policy a fno:Execution .
+        ?policy fno:executes ?executionTarget .
+        ?policy ex:url ?url .
+        OPTIONAL { ?policy ex:method ?method } .
+        OPTIONAL { ?policy ex:contentType ?contentType } .
+      }
+      `;
+    const bindings = await (
+        await engine.queryBindings(queryPolicy, {
+            sources: [
+                {
+                    type: "stringSource",
+                    value: doc,
+                    mediaType: "text/n3",
+                    baseIRI: formUrl.split("#")[0] + "#",
+                },
+            ],
+        })
+    ).toArray();
+
+    return bindings.map((row) => {
+        return {
+            executionTarget: row.get("executionTarget").value,
+            url: row.get("url").value,
+            method: row.get("method")?.value,
+            contentType: row.get("contentType")?.value,
+        };
+    });
+}
+
+function parseSubmitData(fields) {
+    let data = "";
+    for (const field of fields) {
+        for (const value of field.values) {
+            if (field.type === "SingleLineTextField" || field.type === "MultiLineTextField") {
+                data += `<${value.subject}> <${field.property}> "${value.value}" .\n`;
+            } else if (field.type === "Choice") {
+                data += `<${value.subject}> <${field.property}> <${value.value}> .\n`;
+            } else if (field.type === "BooleanField") {
+                data += `<${value.subject}> <${field.property}> ${value.value ? "true" : "false"} .\n`;
+            } else if (field.type === "DateField") {
+                data += `<${value.subject}> <${field.property}> "${new Date(
+                    value.value
+                ).toISOString()}"^^<http://www.w3.org/2001/XMLSchema#date> .\n`;
+            } else {
+                console.warn("Unknown field type", field.type);
+            }
+        }
+    }
+    return data;
+}
+
+async function submitHttpRequest(policy, data) {
+    const response = await fetch(policy.url, {
+        method: policy.method,
+        headers: {
+            "Content-Type": policy.contentType || "text/n3",
+        },
+        body: data,
+    });
+
+    if (response.ok) {
+        console.log("Form submitted successfully via HTTP request.");
+        return true;
+    } else {
+        console.error("HTTP request failed: " + response.status);
+        return false;
+    }
 }

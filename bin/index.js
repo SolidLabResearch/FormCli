@@ -8,7 +8,8 @@ import {
     parseForm,
     printAnswers,
     promptField,
-    queryDataForField
+    queryDataForField,
+    submit
 } from "../src/index.js";
 import {n3reasoner} from "eyereasoner";
 import {v4} from "uuid";
@@ -72,6 +73,6 @@ const options = yargs(hideBin(process.argv))
         }
 
         // Submit answers
-        // TODO: Implement
+        await submit(n3form, options.form, fields);
     }
 })();
