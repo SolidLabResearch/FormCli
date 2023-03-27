@@ -1,8 +1,12 @@
-const { QueryEngine } = require('@comunica/query-sparql');
+import { QueryEngine } from '@comunica/query-sparql';
+import inquirer from 'inquirer';
+import DatePrompt from "inquirer-date-prompt";
+
+inquirer.registerPrompt("date", DatePrompt);
 
 const engine = new QueryEngine();
 
-async function loadContentOfUrl(url) {
+export async function loadContentOfUrl(url) {
     const response = await fetch(url, {
         cors: "cors",
     });
@@ -15,7 +19,7 @@ async function loadContentOfUrl(url) {
     return content;
 }
 
-async function parseForm(n3form, formUrl) {
+export async function parseForm(n3form, formUrl) {
     const query = `
       PREFIX ui: <http://www.w3.org/ns/ui#>
       PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -99,7 +103,7 @@ async function parseForm(n3form, formUrl) {
     return fields;
 }
 
-async function queryDataForField(data, field, doc) {
+export async function queryDataForField(data, field, doc) {
     const query = `
       SELECT ?s ?value WHERE {
         ?s <${field.property}> ?value.
@@ -127,8 +131,137 @@ async function queryDataForField(data, field, doc) {
     });
 }
 
-module.exports = {
-    loadContentOfUrl,
-    parseForm,
-    queryDataForField,
-};
+export async function promptField(field) {
+    let done = false;
+    while (!done) {
+        printAnswers(field);
+
+        const questions = [
+            {
+                type: 'list',
+                name: 'action',
+                message: 'What do you want to do?',
+                choices: [
+                    {name: 'Add new', value: 'add'},
+                    {name: 'Remove existing', value: 'remove'},
+                    {name: 'Done', value: 'done'},
+                ],
+            },
+        ];
+        const action = await inquirer.prompt(questions);
+        if (action.action === 'done') {
+            done = true;
+        }
+        if (action.action === 'add') {
+            await addNew(field);
+        }
+        if (action.action === 'remove') {
+            const questions = [
+                {
+                    type: 'list',
+                    name: 'value',
+                    message: field.label,
+                    choices: field.values.map((value, index) => {
+                        return {name: parseValue(value.value, field), value: index};
+                    }),
+                },
+            ];
+            const answer = await inquirer.prompt(questions);
+            field.values = field.values.filter((value, index) => index !== answer.value);
+        }
+    }
+}
+
+export function printAnswers(field) {
+    // Print field label in bold
+    console.log(`\x1b[1m${field.label}\x1b[0m`);
+    // Print field values
+    for (const value of field.values) {
+        console.log(`- ${parseValue(value.value, field)}`);
+    }
+}
+
+function parseValue(value, field) {
+    if (field.type === "SingleLineTextField" || field.type === "MultiLineTextField") {
+        return value;
+    } else if (field.type === "Choice") {
+        for (const option of field.options) {
+            if (option.value === value) {
+                return option.label;
+            }
+        }
+    } else if (field.type === "DateField") {
+        return new Date(value).toLocaleString();
+    } else if (field.type === "BooleanField") {
+        return value === "true" ? "Yes" : "No";
+    } else {
+        console.warn(`Unknown field type: ${field.type}`);
+    }
+}
+
+async function addNew(field) {
+    if (field.type === "Choice") {
+        const questions = [
+            {
+                type: 'list',
+                name: 'value',
+                message: field.label,
+                choices: field.options.map(option => {
+                    return {name: option.label, value: option.value};
+                }),
+            },
+        ];
+        const answer = await inquirer.prompt(questions);
+        field.values.push({value: answer.value});
+        return;
+    }
+    if (field.type === "DateField") {
+        const questions = [
+            {
+                type: 'date',
+                name: 'value',
+                message: field.label,
+            },
+        ];
+        const answer = await inquirer.prompt(questions);
+        field.values.push({value: answer.value.toISOString()});
+        return;
+    }
+    if (field.type === "BooleanField") {
+        const questions = [
+            {
+                type: 'confirm',
+                name: 'value',
+                message: field.label,
+            },
+        ];
+        const answer = await inquirer.prompt(questions);
+        field.values.push({value: answer.value ? "true" : "false"});
+        return;
+    }
+    if (field.type === "SingleLineTextField" || field.type === "MultiLineTextField") {
+        const questions = [
+            {
+                type: 'input',
+                name: 'value',
+                message: field.label,
+            },
+        ];
+        const answer = await inquirer.prompt(questions);
+        field.values.push({value: answer.value});
+        return;
+    }
+    console.warn(`Unknown field type: ${field.type}`);
+}
+
+export async function confirmSubmit() {
+    const questions = [
+        {
+            type: 'confirm',
+            name: 'submit',
+            message: 'Do you want to submit the form?',
+        },
+    ];
+    const answer = await inquirer.prompt(questions);
+    return answer.submit;
+}

@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 
-const yargs = require('yargs');
-const {loadContentOfUrl, parseForm, queryDataForField} = require("../src");
-const { n3reasoner } = require("eyereasoner");
-const { v4 } = require("uuid");
+import yargs from 'yargs';
+import {hideBin} from 'yargs/helpers'
+import {
+    confirmSubmit,
+    loadContentOfUrl,
+    parseForm,
+    printAnswers,
+    promptField,
+    queryDataForField
+} from "../src/index.js";
+import {n3reasoner} from "eyereasoner";
+import {v4} from "uuid";
 
-const options = yargs
+const options = yargs(hideBin(process.argv))
     .usage("Usage: -d <dataset URL> -f <form description> -r <N3 Conversion Rules>")
     .option("d", {alias: "data", describe: "Dataset URL", type: "string", demandOption: true})
     .option("r", {alias: "rules", describe: "N3 Conversion Rules URL", type: "string", demandOption: false})
@@ -29,7 +37,7 @@ const options = yargs
                 n3form = `@base <${this.doc}#> .\n${n3form}`;
             }
 
-            const options = { blogic: false, outputType: "string" };
+            const options = {blogic: false, outputType: "string"};
             n3form = await n3reasoner(n3form, n3rules, options);
         }
 
@@ -43,10 +51,27 @@ const options = yargs
             field.values = data || [];
 
             if (field.required && !field.values.length) {
-                field.values = [{ value: undefined, subject: `${options.data}#${v4()}` }];
+                field.values = [{value: undefined, subject: `${options.data}#${v4()}`}];
             }
         }
 
-        console.log("Fields", fields);
+        let confirm = false;
+        while (!confirm) {
+            for (const field of fields) {
+                await promptField(field);
+                printAnswers(field);
+                console.log("\n");
+            }
+
+            console.log("Final answers:");
+            for (const field of fields) {
+                printAnswers(field);
+            }
+
+            confirm = await confirmSubmit();
+        }
+
+        // Submit answers
+        // TODO: Implement
     }
 })();

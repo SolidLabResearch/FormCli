@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A form viewer app with Solid, but from the command line - Google Forms but the Solid way",
   "main": "bin/index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,6 +17,8 @@
     "@comunica/query-sparql": "^2.6.9",
     "@inrupt/solid-client-authn-node": "^1.14.0",
     "eyereasoner": "^4.11.1",
+    "inquirer": "^9.1.5",
+    "inquirer-date-prompt": "^3.0.0",
     "uuid": "^9.0.0",
     "yargs": "^17.6.0"
   }
