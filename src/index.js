@@ -136,16 +136,23 @@ export async function promptField(field) {
     while (!done) {
         printAnswers(field);
 
+        const choices = [];
+        if (field.multiple || field.values.length === 0) {
+            choices.push({name: 'Add new', value: 'add'});
+        }
+        if (field.values.length > 0) {
+            choices.push({name: 'Remove existing', value: 'remove'});
+        }
+        if (!field.required || field.values.length > 0) {
+            choices.push({name: 'Done', value: 'done'});
+        }
+
         const questions = [
             {
                 type: 'list',
                 name: 'action',
                 message: 'What do you want to do?',
-                choices: [
-                    {name: 'Add new', value: 'add'},
-                    {name: 'Remove existing', value: 'remove'},
-                    {name: 'Done', value: 'done'},
-                ],
+                choices: choices,
             },
         ];
         const action = await inquirer.prompt(questions);
