@@ -42,10 +42,10 @@ const options = yargs(hideBin(process.argv))
             n3form = await n3reasoner(n3form, n3rules, options);
         }
 
-        const fields = await parseForm(n3form, options.form);
+        const { fields, formTargetClass } = await parseForm(n3form, options.form);
 
         for (const field of fields) {
-            const data = await queryDataForField(n3doc, field, options.data);
+            const data = await queryDataForField(n3doc, field, options.data, formTargetClass);
             if (!field.multiple && data.length > 1) {
                 console.error(`Multiple values found for ${field.label} while only one is expected.`);
             }
@@ -73,6 +73,6 @@ const options = yargs(hideBin(process.argv))
         }
 
         // Submit answers
-        await submit(n3form, options.form, fields);
+        await submit(n3form, options.form, fields, formTargetClass);
     }
 })();

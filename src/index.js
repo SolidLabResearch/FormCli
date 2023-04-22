@@ -24,8 +24,9 @@ export async function parseForm(n3form, formUrl) {
     const query = `
       PREFIX ui: <http://www.w3.org/ns/ui#>
       PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-      SELECT ?type ?property ?label ?from ?required ?multiple ?sequence WHERE {
-        <${formUrl}> ui:parts ?list .
+      SELECT ?targetClass ?type ?property ?label ?from ?required ?multiple ?sequence WHERE {
+        <${formUrl}> ui:parts ?list ;
+            ui:property ?targetClass .
         ?list rdf:rest*/rdf:first ?field .
         ?field a ?type;
           ui:property ?property.
@@ -50,7 +51,9 @@ export async function parseForm(n3form, formUrl) {
         })
     ).toArray();
 
+    let formTargetClass;
     const fields = bindings.map((row) => {
+        formTargetClass = row.get("targetClass").value;
         return {
             type: row.get("type").value.split("#")[1],
             property: row.get("property").value,
@@ -101,13 +104,14 @@ export async function parseForm(n3form, formUrl) {
         }
     }
 
-    return fields;
+    return { fields, formTargetClass };
 }
 
-export async function queryDataForField(data, field, doc) {
+export async function queryDataForField(data, field, doc, formTargetClass) {
     const query = `
       SELECT ?s ?value WHERE {
-        ?s <${field.property}> ?value.
+        ?s a <${formTargetClass}> ;
+          <${field.property}> ?value.
       }
       `;
 
@@ -274,7 +278,7 @@ export async function confirmSubmit() {
     return answer.submit;
 }
 
-export async function submit(form, formUrl, fields) {
+export async function submit(form, formUrl, fields, formTargetClass) {
     const options = { blogic: false, outputType: "string" };
     const reasonerResult = await n3reasoner(
         `PREFIX ex: <http://example.org/>\n<${formUrl}> ex:event ex:Submit .`,
@@ -287,7 +291,7 @@ export async function submit(form, formUrl, fields) {
         console.warn("No ex:Submit policy found for this form.");
         return;
     }
-    const data = parseSubmitData(fields);
+    const data = parseSubmitData(fields, formTargetClass);
 
     let redirectPolicy;
     let success = true;
@@ -346,18 +350,18 @@ async function parseSubmitPolicy(doc, formUrl) {
     });
 }
 
-function parseSubmitData(fields) {
+function parseSubmitData(fields, formTargetClass) {
     let data = "";
     for (const field of fields) {
         for (const value of field.values) {
             if (field.type === "SingleLineTextField" || field.type === "MultiLineTextField") {
-                data += `<${value.subject}> <${field.property}> "${value.value}" .\n`;
+                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> "${value.value}" .\n`;
             } else if (field.type === "Choice") {
-                data += `<${value.subject}> <${field.property}> <${value.value}> .\n`;
+                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> <${value.value}> .\n`;
             } else if (field.type === "BooleanField") {
-                data += `<${value.subject}> <${field.property}> ${value.value ? "true" : "false"} .\n`;
+                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> ${value.value ? "true" : "false"} .\n`;
             } else if (field.type === "DateField") {
-                data += `<${value.subject}> <${field.property}> "${new Date(
+                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> "${new Date(
                     value.value
                 ).toISOString()}"^^<http://www.w3.org/2001/XMLSchema#date> .\n`;
             } else {
