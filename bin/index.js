@@ -4,6 +4,7 @@ import yargs from 'yargs';
 import {hideBin} from 'yargs/helpers'
 import {
     confirmSubmit,
+    getSubject,
     loadContentOfUrl,
     parseForm,
     printAnswers,
@@ -12,7 +13,6 @@ import {
     submit
 } from "../src/index.js";
 import {n3reasoner} from "eyereasoner";
-import {v4} from "uuid";
 
 const options = yargs(hideBin(process.argv))
     .usage("Usage: -d <dataset URL> -f <form description> -r <N3 Conversion Rules>")
@@ -52,7 +52,7 @@ const options = yargs(hideBin(process.argv))
             field.values = data || [];
 
             if (field.required && !field.values.length) {
-                field.values = [{value: undefined, subject: `${options.data}#${v4()}`}];
+                field.values = [{value: undefined}];
             }
         }
 
@@ -72,7 +72,12 @@ const options = yargs(hideBin(process.argv))
             confirm = await confirmSubmit();
         }
 
+        // Get subject for data
+        const subject = await getSubject(formTargetClass, n3doc);
+        console.log('\x1b[1mSubject\x1b[0m');
+        console.log(`- ${subject}`);
+
         // Submit answers
-        await submit(n3form, options.form, fields, formTargetClass);
+        await submit(n3form, options.form, fields, formTargetClass, subject);
     }
 })();

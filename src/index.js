@@ -2,6 +2,7 @@ import { QueryEngine } from '@comunica/query-sparql';
 import inquirer from 'inquirer';
 import DatePrompt from "inquirer-date-prompt";
 import {n3reasoner} from "eyereasoner";
+import {v4} from "uuid";
 
 inquirer.registerPrompt("date", DatePrompt);
 
@@ -109,7 +110,7 @@ export async function parseForm(n3form, formUrl) {
 
 export async function queryDataForField(data, field, doc, formTargetClass) {
     const query = `
-      SELECT ?s ?value WHERE {
+      SELECT ?value WHERE {
         ?s a <${formTargetClass}> ;
           <${field.property}> ?value.
       }
@@ -130,7 +131,6 @@ export async function queryDataForField(data, field, doc, formTargetClass) {
 
     return bindings.map((row) => {
         return {
-            subject: row.get("s").value,
             value: row.get("value").value,
         };
     });
@@ -278,7 +278,7 @@ export async function confirmSubmit() {
     return answer.submit;
 }
 
-export async function submit(form, formUrl, fields, formTargetClass) {
+export async function submit(form, formUrl, fields, formTargetClass, subject) {
     const options = { blogic: false, outputType: "string" };
     const reasonerResult = await n3reasoner(
         `PREFIX ex: <http://example.org/>\n<${formUrl}> ex:event ex:Submit .`,
@@ -291,7 +291,7 @@ export async function submit(form, formUrl, fields, formTargetClass) {
         console.warn("No ex:Submit policy found for this form.");
         return;
     }
-    const data = parseSubmitData(fields, formTargetClass);
+    const data = parseSubmitData(fields, formTargetClass, subject);
 
     let redirectPolicy;
     let success = true;
@@ -350,18 +350,18 @@ async function parseSubmitPolicy(doc, formUrl) {
     });
 }
 
-function parseSubmitData(fields, formTargetClass) {
-    let data = "";
+function parseSubmitData(fields, formTargetClass, subject) {
+    let data = `<${subject}> a <${formTargetClass}> .\n`;
     for (const field of fields) {
         for (const value of field.values) {
             if (field.type === "SingleLineTextField" || field.type === "MultiLineTextField") {
-                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> "${value.value}" .\n`;
+                data += `<${subject}> <${field.property}> "${value.value}" .\n`;
             } else if (field.type === "Choice") {
-                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> <${value.value}> .\n`;
+                data += `<${subject}> <${field.property}> <${value.value}> .\n`;
             } else if (field.type === "BooleanField") {
-                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> ${value.value ? "true" : "false"} .\n`;
+                data += `<${subject}> <${field.property}> ${value.value ? "true" : "false"} .\n`;
             } else if (field.type === "DateField") {
-                data += `<${value.subject}> a <${formTargetClass}> ; <${field.property}> "${new Date(
+                data += `<${subject}> <${field.property}> "${new Date(
                     value.value
                 ).toISOString()}"^^<http://www.w3.org/2001/XMLSchema#date> .\n`;
             } else {
@@ -387,5 +387,96 @@ async function submitHttpRequest(policy, data) {
     } else {
         console.error("HTTP request failed: " + response.status);
         return false;
+    }
+}
+
+async function getSubjectPossibilities(formTargetClass, n3doc) {
+    // Get all existing subjects for the form target class in the data document
+    const query = `
+      SELECT ?subject WHERE {
+        ?subject a <${formTargetClass}> .
+      }
+      `;
+    const bindings = await (
+        await engine.queryBindings(query, {
+            sources: [
+                {
+                    type: "stringSource",
+                    value: n3doc,
+                    mediaType: "text/n3",
+                },
+            ],
+        })
+    ).toArray();
+    const subjectPossibilities = bindings.map((binding) => binding.get("subject").value);
+
+    // Add random subject
+    subjectPossibilities.push(`urn:uuid:${v4()}`);
+
+    // Allow user input
+    subjectPossibilities.push("Other");
+
+    return subjectPossibilities;
+}
+
+export async function getSubject(formTargetClass, n3doc) {
+    // Get suggestions for subject
+    const subjectPossibilities = (await getSubjectPossibilities(formTargetClass, n3doc)).map((subject) => {
+        return {
+            name: subject,
+            value: subject,
+        };
+    });
+
+    // Prompt user for subject
+    console.log('\n');
+    const questions = [
+        {
+            type: 'list',
+            name: 'subject',
+            message: 'Subject URI to use for the data?',
+            choices: subjectPossibilities,
+        },
+    ];
+    const action = await inquirer.prompt(questions);
+    if (action.subject === 'Other') {
+        let subject = '';
+        while (!subject) {
+            // Allow user to enter a custom subject
+            const questions = [
+                {
+                    type: 'input',
+                    name: 'subject',
+                    message: 'Subject URI to use for the data?',
+                },
+            ];
+            const otherSubject = await inquirer.prompt(questions);
+            subject = await validateSubject(otherSubject.subject);
+            if (!subject) {
+                console.warn('Please fill in a valid subject.');
+            }
+        }
+        return subject;
+    } else {
+        return action.subject;
+    }
+}
+
+async function validateSubject(subject) {
+    if (subject.includes(':')) {
+        if (!subject.includes('://')) {
+            // Do call to prefix.cc to get the full URI
+            const [prefix, suffix] = subject.split(':');
+            const response = await fetch(`https://prefix.cc/${prefix}.file.json`);
+            const json = await response.json();
+            const uri = json[prefix];
+            if (uri) {
+                return uri + suffix;
+            } else {
+                return null;
+            }
+        }
+    } else {
+        return null;
     }
 }
