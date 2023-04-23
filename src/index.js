@@ -3,6 +3,7 @@ import inquirer from 'inquirer';
 import DatePrompt from "inquirer-date-prompt";
 import {n3reasoner} from "eyereasoner";
 import {v4} from "uuid";
+import open from "open";
 
 inquirer.registerPrompt("date", DatePrompt);
 
@@ -309,6 +310,8 @@ export async function submit(form, formUrl, fields, formTargetClass, subject) {
     if (redirectPolicy && success) {
         // Print the redirect URL as we can't redirect from the terminal
         console.log("Redirecting to: " + redirectPolicy.url);
+        // Open the redirect URL in the browser
+        await open(redirectPolicy.url);
     }
 }
 
