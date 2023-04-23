@@ -16,18 +16,18 @@ import {n3reasoner} from "eyereasoner";
 
 const options = yargs(hideBin(process.argv))
     .usage("Usage: -d <dataset URL> -f <form description> -r <N3 Conversion Rules>")
-    .option("d", {alias: "data", describe: "Dataset URL", type: "string", demandOption: true})
+    .option("d", {alias: "data", describe: "Dataset URL", type: "string", demandOption: false})
     .option("r", {alias: "rules", describe: "N3 Conversion Rules URL", type: "string", demandOption: false})
     .option("f", {alias: "form", describe: "Form description URI", type: "string", demandOption: true})
     .argv;
 
 (async () => {
-    if (options.data && options.form) {
+    if (options.form) {
         console.log("Dataset URL: ", options.data);
         console.log("N3 Conversion Rules URL: ", options.rules);
         console.log("Form description URL: ", options.form);
 
-        const n3doc = await loadContentOfUrl(options.data);
+        const n3doc = options.data ? await loadContentOfUrl(options.data) : "";
         let n3form = await loadContentOfUrl(options.form);
 
         if (options.rules) {
@@ -50,10 +50,6 @@ const options = yargs(hideBin(process.argv))
                 console.error(`Multiple values found for ${field.label} while only one is expected.`);
             }
             field.values = data || [];
-
-            if (field.required && !field.values.length) {
-                field.values = [{value: undefined}];
-            }
         }
 
         let confirm = false;

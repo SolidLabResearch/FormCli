@@ -110,6 +110,10 @@ export async function parseForm(n3form, formUrl) {
 }
 
 export async function queryDataForField(data, field, doc, formTargetClass) {
+    if (!doc) {
+        // No data document, so no data to query
+        return [];
+    }
     const query = `
       SELECT ?value WHERE {
         ?s a <${formTargetClass}> ;
