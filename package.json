@@ -16,7 +16,7 @@
   "dependencies": {
     "@comunica/query-sparql": "^2.6.9",
     "@inrupt/solid-client-authn-node": "^1.14.0",
-    "eyereasoner": "^4.11.1",
+    "eyereasoner": "^4.21.3",
     "inquirer": "^9.1.5",
     "inquirer-date-prompt": "^3.0.0",
     "open": "^9.1.0",
