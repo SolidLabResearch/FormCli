@@ -36,7 +36,7 @@ const options = yargs(hideBin(process.argv))
 
             // Add base to doc if not yet. Fixing relative IRIs.
             if (!n3form.includes("@base") && !n3form.includes("BASE")) {
-                n3form = `@base <${this.doc}#> .\n${n3form}`;
+                n3form = `@base <${this.doc}> .\n${n3form}`;
             }
 
             const options = {blogic: false, outputType: "string"};

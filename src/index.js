@@ -17,7 +17,7 @@ export async function loadContentOfUrl(url) {
 
     // Add base to doc if not yet. Fixing relative IRIs.
     if (!content.includes("@base") && !content.includes("BASE")) {
-        content = `@base <${url.split("#")[0]}#> .\n${content}`;
+        content = `@base <${url.split("#")[0]}> .\n${content}`;
     }
     return content;
 }
@@ -47,7 +47,7 @@ export async function parseForm(n3form, formUrl) {
                     type: "stringSource",
                     value: n3form,
                     mediaType: "text/n3",
-                    baseIRI: formUrl.split("#")[0] + "#",
+                    baseIRI: formUrl.split("#")[0],
                 },
             ],
         })
@@ -91,7 +91,7 @@ export async function parseForm(n3form, formUrl) {
                             type: "stringSource",
                             value: n3form,
                             mediaType: "text/n3",
-                            baseIRI: formUrl.split("#")[0] + "#",
+                            baseIRI: formUrl.split("#")[0],
                         },
                     ],
                 })
@@ -128,7 +128,7 @@ export async function queryDataForField(data, field, doc, formTargetClass) {
                     type: "stringSource",
                     value: data,
                     mediaType: "text/n3",
-                    baseIRI: doc.split("#")[0] + "#",
+                    baseIRI: doc.split("#")[0],
                 },
             ],
         })
@@ -341,7 +341,7 @@ async function parseSubmitPolicy(doc, formUrl) {
                     type: "stringSource",
                     value: doc,
                     mediaType: "text/n3",
-                    baseIRI: formUrl.split("#")[0] + "#",
+                    baseIRI: formUrl.split("#")[0],
                 },
             ],
         })
