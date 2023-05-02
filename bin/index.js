@@ -30,8 +30,9 @@ const options = yargs(hideBin(process.argv))
         const n3doc = options.data ? await loadContentOfUrl(options.data) : "";
         let n3form = await loadContentOfUrl(options.form);
 
-        if (options.rules) {
-            const n3rules = await loadContentOfUrl(options.rules);
+        const rules = options.rules;
+        if (rules) {
+            const n3rules = await loadContentOfUrl(rules);
 
             // Add base to doc if not yet. Fixing relative IRIs.
             if (!n3form.includes("@base") && !n3form.includes("BASE")) {
