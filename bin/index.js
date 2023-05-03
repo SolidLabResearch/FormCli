@@ -29,6 +29,7 @@ const options = yargs(hideBin(process.argv))
 
         const n3doc = options.data ? await loadContentOfUrl(options.data) : "";
         let n3form = await loadContentOfUrl(options.form);
+        const originalForm = n3form;
 
         const rules = options.rules;
         if (rules) {
@@ -75,6 +76,6 @@ const options = yargs(hideBin(process.argv))
         console.log(`- ${subject}`);
 
         // Submit answers
-        await submit(n3form, options.form, fields, formTargetClass, subject);
+        await submit(originalForm, options.form, fields, formTargetClass, subject);
     }
 })();
