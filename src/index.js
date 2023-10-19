@@ -361,7 +361,7 @@ function parseSubmitData(fields, formTargetClass, generatedBy, subject) {
     let data = `<${subject}> a <${formTargetClass}> .\n`;
 
     if (generatedBy && subject) {
-        data += `<${subject}> a <http://www.w3.org/ns/prov#Entity>; <http://www.w3.org/ns/prov#wasGeneratedBy> <${generatedBy}> .\n`;
+        data += `<${subject}> <http://www.w3.org/ns/prov#wasGeneratedBy> <${generatedBy}> .\n`;
     }
 
     for (const field of fields) {
