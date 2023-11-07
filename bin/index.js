@@ -44,7 +44,7 @@ const options = yargs(hideBin(process.argv))
             n3form = await n3reasoner(n3form, n3rules, options);
         }
 
-        const { fields, formTargetClass } = await parseForm(n3form, options.form);
+        const {fields, formTargetClass} = await parseForm(n3form, options.form);
 
         for (const field of fields) {
             const data = await queryDataForField(n3doc, field, options.data, formTargetClass);
@@ -53,6 +53,8 @@ const options = yargs(hideBin(process.argv))
             }
             field.values = data || [];
         }
+
+        const originalFields = JSON.parse(JSON.stringify(fields));
 
         let confirm = false;
         while (!confirm) {
@@ -76,6 +78,6 @@ const options = yargs(hideBin(process.argv))
         console.log(`- ${subject}`);
 
         // Submit answers
-        await submit(originalForm, options.form, fields, formTargetClass, subject);
+        await submit(originalForm, options.form, fields, formTargetClass, subject, originalFields);
     }
 })();
