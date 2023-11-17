@@ -27,6 +27,10 @@ And then execute with:
 form -d <dataset URL> -f <form description> -r <N3 Conversion Rules>
 ```
 
+## Notes on the input files
+
+See https://github.com/SolidLabResearch/FormRenderer#notes-on-the-input-files
+
 ## Preview
 
 <img width="1355" alt="FormCli" src="https://github.com/smessie/FormCli/assets/13602120/58733228-7b47-4667-8049-5c83f7dcb65e">
