@@ -1,5 +1,9 @@
 # FormCli
+
 A form renderer app with Solid, but from the command line - Google Forms but the Solid way
+
+[![DOI](https://zenodo.org/badge/558396083.svg)](https://zenodo.org/doi/10.5281/zenodo.10285223)
+
 
 ## Installation
 
