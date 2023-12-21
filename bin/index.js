@@ -40,7 +40,7 @@ const options = yargs(hideBin(process.argv))
                 n3form = `@base <${this.doc}> .\n${n3form}`;
             }
 
-            const options = {blogic: false, outputType: "string"};
+            const options = {outputType: "string"};
             n3form = await n3reasoner(n3form, n3rules, options);
         }
 

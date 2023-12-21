@@ -285,16 +285,16 @@ export async function confirmSubmit() {
 }
 
 export async function submit(form, formUrl, fields, formTargetClass, subject, originalFields) {
-    const options = {blogic: false, outputType: "string"};
+    const options = {outputType: "string"};
     const reasonerResult = await n3reasoner(
-        `PREFIX ex: <http://example.org/>\n<${formUrl}> ex:event ex:Submit .`,
+        `PREFIX pol: <https://w3id.org/DFDP/policy#>\n<${formUrl}> pol:event pol:Submit .`,
         form,
         options
     );
 
     const policies = await parseSubmitPolicy(reasonerResult, formUrl);
     if (!policies) {
-        console.warn("No ex:Submit policy found for this form.");
+        console.warn("No pol:Submit policy found for this form.");
         return;
     }
     const data = parseSubmitData(fields, formTargetClass, formUrl, subject);
@@ -303,11 +303,11 @@ export async function submit(form, formUrl, fields, formTargetClass, subject, or
     let success = true;
 
     for (const policy of policies) {
-        if (policy.executionTarget === "http://example.org/httpRequest") {
+        if (policy.executionTarget === "http://www.w3.org/2011/http#Request") {
             success = (await submitHttpRequest(policy, data)) && success;
-        } else if (policy.executionTarget === "http://example.org/redirect") {
+        } else if (policy.executionTarget === "https://w3id.org/DFDP/policy#Redirect") {
             redirectPolicy = policy;
-        } else if (policy.executionTarget === 'http://example.org/n3Patch') {
+        } else if (policy.executionTarget === 'http://www.w3.org/ns/solid/terms#InsertDeletePatch') {
             success = (await submitN3Patch(policy, data, originalFields, formTargetClass, formUrl)) && success;
         } else {
             console.warn("Unknown execution target: " + policy.executionTarget);
@@ -325,16 +325,17 @@ export async function submit(form, formUrl, fields, formTargetClass, subject, or
 async function parseSubmitPolicy(doc, formUrl) {
     const queryPolicy = `
       PREFIX ex: <http://example.org/>
-      PREFIX pol: <https://www.example.org/ns/policy#>
+      PREFIX pol: <https://w3id.org/DFDP/policy#>
       PREFIX fno: <https://w3id.org/function/ontology#>
+      PREFIX http: <http://www.w3.org/2011/http#>
 
       SELECT ?executionTarget ?method ?url ?contentType WHERE {
         ?id pol:policy ?policy .
         ?policy a fno:Execution .
         ?policy fno:executes ?executionTarget .
-        ?policy ex:url ?url .
-        OPTIONAL { ?policy ex:method ?method } .
-        OPTIONAL { ?policy ex:contentType ?contentType } .
+        ?policy http:requestURI ?url .
+        OPTIONAL { ?policy http:methodName ?method } .
+        OPTIONAL { ?policy http:headers ( [ http:fieldName "Content-Type" ; http:fieldValue ?contentType ] ) } .
       }
       `;
     const bindings = await (
@@ -343,7 +344,7 @@ async function parseSubmitPolicy(doc, formUrl) {
                 {
                     type: "stringSource",
                     value: doc,
-                    mediaType: "text/n3",
+                    mediaType: "text/turtle",
                     baseIRI: formUrl.split("#")[0],
                 },
             ],

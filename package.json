@@ -14,9 +14,9 @@
     "form": "./bin/index.js"
   },
   "dependencies": {
-    "@comunica/query-sparql": "^2.6.9",
+    "@comunica/query-sparql": "^2.10.1",
     "@inrupt/solid-client-authn-node": "^1.14.0",
-    "eyereasoner": "^4.21.3",
+    "eyereasoner": "^11.1.2",
     "inquirer": "^9.1.5",
     "inquirer-date-prompt": "^3.0.0",
     "open": "^9.1.0",
